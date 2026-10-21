@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI dự đoán trận đấu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Poppins', sans-serif; background: #f2f4f8; color: #222; }
+        header {
+            background: linear-gradient(90deg, #1b7a1b, #2e9e2e);
+            color: #fff; padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        header h1 { margin: 0; font-size: 1.3rem; }
+        header a { color: #fff; text-decoration: none; opacity: .9; margin-left: 16px; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 340px minmax(0, 1fr) 330px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 16px;
+            align-items: start;
+        }
+        .panel { background: #fff; border-radius: 16px; padding: 18px; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+
+        /* ===== EDITOR ===== */
+        .team-card { margin-bottom: 18px; }
+        .team-card h3 { margin: 0 0 8px; font-size: .95rem; display: flex; align-items: center; gap: 8px; }
+        .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+        input[type=text], input[type=number], select {
+            width: 100%; padding: 7px 9px; border: 1px solid #ddd; border-radius: 8px;
+            font-family: inherit; font-size: .88rem;
+        }
+        input[type=color] { width: 46px; height: 34px; border: none; border-radius: 8px; cursor: pointer; padding: 0; }
+        .row2 { display: flex; gap: 8px; margin: 8px 0; }
+        .prow { display: grid; grid-template-columns: 20px 48px 1fr 34px; gap: 6px; align-items: center; margin-bottom: 5px; }
+        .prow input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+        .role { font-size: .7rem; font-weight: 700; color: #666; text-align: center; }
+        .prow.off input[type=text], .prow.off input[type=number] { opacity: .45; }
+
+        /* ===== SÂN ===== */
+        .hint { color: #e67e22; font-size: .82rem; margin: 0 0 10px; text-align: center; }
+        #pitch {
+            position: relative; width: 100%; max-width: 560px; aspect-ratio: 2 / 3; margin: 0 auto;
+            border-radius: 12px; overflow: hidden; border: 3px solid #fff;
+            background: repeating-linear-gradient(0deg, #2f9e44 0 60px, #37b24d 60px 120px);
+            box-shadow: 0 10px 30px rgba(0,0,0,.25);
+            touch-action: none;
+        }
+        #pitch .line { position: absolute; border: 2px solid rgba(255,255,255,.75); }
+        .mid    { left: 0; right: 0; top: 50%; border-width: 2px 0 0 0 !important; }
+        .circle { width: 24%; aspect-ratio: 1; left: 38%; top: calc(50% - 12%); border-radius: 50%; }
+        .box-top    { left: 25%; width: 50%; top: 0; height: 15%; border-top: none !important; }
+        .box-bottom { left: 25%; width: 50%; bottom: 0; height: 15%; border-bottom: none !important; }
+        .side-label {
+            position: absolute; left: 10px; font-size: .72rem; font-weight: 700; color: #fff;
+            background: rgba(0,0,0,.35); padding: 2px 8px; border-radius: 999px; pointer-events: none;
+        }
+        .player {
+            position: absolute; transform: translate(-50%, -50%); width: 96px; text-align: center;
+            cursor: grab; user-select: none; touch-action: none;
+        }
+        .player.dragging { cursor: grabbing; z-index: 10; }
+        .player .wrap { width: 50px; height: 50px; margin: 0 auto; }
+        .player svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+        .player .name {
+            display: block; margin-top: 1px; font-size: .75rem; font-weight: 600; color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* ===== DỰ ĐOÁN ===== */
+        .predict { position: sticky; top: 16px; }
+        .p-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .p-head h2 { margin: 0; font-size: 1.05rem; }
+        .chip { font-size: .7rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #eef0f4; color: #555; }
+        .chip.loading { background: #fff3bf; color: #8a6d00; }
+        .chip.ok { background: #d3f9d8; color: #2b8a3e; }
+        .chip.stale { background: #ffe8cc; color: #d9480f; }
+        .chip.err { background: #ffe3e3; color: #c92a2a; }
+        .score { text-align: center; font-size: 2.6rem; font-weight: 700; margin: 6px 0 0; letter-spacing: 2px; }
+        .vs { display: flex; justify-content: space-between; font-size: .8rem; font-weight: 600; margin-bottom: 4px; }
+        .delta { text-align: center; font-size: .75rem; color: #d9480f; min-height: 1em; margin-bottom: 8px; }
+        .prob { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: #eee; }
+        .prob div { transition: width .5s; }
+        .prob-legend { display: flex; justify-content: space-between; font-size: .72rem; color: #555; margin: 4px 0 14px; }
+        .stat { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 8px 0; border-top: 1px solid #f0f0f0; }
+        .stat .v { font-size: 1.25rem; font-weight: 700; }
+        .stat .v:last-child { text-align: right; }
+        .stat .l { font-size: .75rem; color: #666; padding: 0 10px; }
+        .summary { font-size: .85rem; line-height: 1.5; margin: 12px 0 6px; }
+        #factors { margin: 0; padding-left: 18px; font-size: .8rem; color: #444; line-height: 1.5; }
+        .auto { display: flex; gap: 8px; align-items: center; font-size: .82rem; margin: 14px 0 8px; cursor: pointer; }
+        #predictBtn {
+            width: 100%; padding: 11px; border: none; border-radius: 10px; color: #fff; cursor: pointer;
+            font-family: inherit; font-weight: 600; background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        #predictBtn:disabled { opacity: .6; cursor: wait; }
+        .note { font-size: .7rem; color: #868e96; margin: 10px 0 0; line-height: 1.4; }
+
+        @media (max-width: 1150px) {
+            .layout { grid-template-columns: minmax(0, 1fr) 330px; }
+            .editors { grid-column: 1 / -1; order: 3; }
+        }
+        @media (max-width: 800px) {
+            .layout { grid-template-columns: 1fr; }
+            .predict { position: static; order: 2; }
+            .player { width: 76px; }
+            .player .wrap { width: 40px; height: 40px; }
+            .player .name { font-size: .65rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🤖 AI dự đoán trận đấu</h1>
+        <div><a href="index.html">Trang chủ</a><a href="lineup.html">Tạo đội hình</a></div>
+    </header>
+
+    <div class="layout">
+        <!-- TRÁI: SOẠN ĐỘI HÌNH -->
+        <div class="panel editors" id="editors"></div>
+
+        <!-- GIỮA: SÂN -->
+        <div>
+            <p class="hint">Nhập tên cầu thủ thật · Kéo để đổi vị trí · Bấm đúp vào cầu thủ để rút khỏi sân</p>
+            <div id="pitch">
+                <div class="line mid"></div>
+                <div class="line circle"></div>
+                <div class="line box-top"></div>
+                <div class="line box-bottom"></div>
+                <span class="side-label" style="top:8px">ĐỘI KHÁCH (tấn công xuống)</span>
+                <span class="side-label" style="bottom:8px">ĐỘI NHÀ (tấn công lên)</span>
+            </div>
+        </div>
+
+        <!-- PHẢI: DỰ ĐOÁN -->
+        <aside class="panel predict">
+            <div class="p-head">
+                <h2>Dự đoán của AI</h2>
+                <span class="chip" id="status">Chưa dự đoán</span>
+            </div>
+
+            <div class="vs"><span id="nameHome">Đội nhà</span><span id="nameAway">Đội khách</span></div>
+            <div class="score" id="score">– : –</div>
+            <div class="delta" id="delta"></div>
+
+            <div class="prob" id="prob"></div>
+            <div class="prob-legend" id="probLegend"></div>
+
+            <div id="stats"></div>
+
+            <p class="summary" id="summary">Nhập đội hình rồi bấm “Dự đoán ngay”.</p>
+            <ul id="factors"></ul>
+
+            <label class="auto"><input type="checkbox" id="auto" checked> Tự cập nhật khi thay đổi đội hình</label>
+            <button id="predictBtn">Dự đoán ngay</button>
+            <p class="note">Dự đoán do AI ước lượng từ kiến thức chung, chỉ mang tính giải trí, không phải lời khuyên cá cược.</p>
+        </aside>
+    </div>
+
+    <script>
+        const FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '5-3-2', '3-4-3'];
+        const ROLE_VN = { GK: 'TM', DEF: 'HV', MID: 'TV', FWD: 'TĐ' };
+        const STORE_KEY = 'predict-v1';
+
+        const $ = id => document.getElementById(id);
+        const pitch = $('pitch');
+        const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const clamp = v => Math.min(95, Math.max(5, v));
+
+        const teams = {
+            home: { name: 'Đội nhà',  formation: '4-3-3', color: '#e03131', players: [] },
+            away: { name: 'Đội khách', formation: '4-4-2', color: '#1c7ed6', players: [] }
+        };
+
+        // ===== SƠ ĐỒ & VỊ TRÍ =====
+        function layout(side, formation) {
+            const rows = [1, ...formation.split('-').map(Number)];
+            const R = rows.length, pos = [];
+            rows.forEach((n, r) => {
+                const yHome = 91 - (91 - 56) * (r / (R - 1));
+                for (let i = 0; i < n; i++) {
+                    const x = (100 / (n + 1)) * (i + 1);
+                    pos.push(side === 'home' ? { x, y: yHome } : { x: 100 - x, y: 100 - yHome });
+                }
+            });
+            return pos;
+        }
+
+        function arrange(side) {
+            const t = teams[side];
+            t.players = layout(side, t.formation).map((p, i) => ({
+                num: t.players[i]?.num ?? (i + 1),
+                name: t.players[i]?.name ?? ('Cầu thủ ' + (i + 1)),
+                active: t.players[i]?.active ?? true,
+                x: p.x, y: p.y
+            }));
+        }
+
+        const depthOf = (side, p) => side === 'home' ? (95 - p.y) / 90 * 100 : (p.y - 5) / 90 * 100;
+        const widthOf = (side, p) => side === 'home' ? p.x : 100 - p.x;
+        function roleOf(side, p) {
+            const d = depthOf(side, p);
+            return d < 10 ? 'GK' : d < 24 ? 'DEF' : d < 38 ? 'MID' : 'FWD';
+        }
+
+        // ===== VẼ GIAO DIỆN =====
+        function shirtSVG(color, num) {
+            return `<svg viewBox="0 0 64 64">
+                <path d="M20 6 L8 16 L14 26 L20 22 L20 58 L44 58 L44 22 L50 26 L56 16 L44 6 C40 12 24 12 20 6Z"
+                      fill="${color}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                <text x="32" y="42" text-anchor="middle" font-size="18" font-weight="700"
+                      font-family="Poppins, sans-serif" fill="#fff">${esc(num)}</text></svg>`;
+        }
+
+        function renderEditors() {
+            $('editors').innerHTML = ['home', 'away'].map(side => {
+                const t = teams[side];
+                return `<div class="team-card">
+                    <h3><span class="dot" style="background:${t.color}"></span>${side === 'home' ? 'Đội nhà' : 'Đội khách'}</h3>
+                    <input type="text" data-side="${side}" data-k="tname" value="${esc(t.name)}" placeholder="Tên đội (VD: Real Madrid)">
+                    <div class="row2">
+                        <select data-side="${side}" data-k="formation">
+                            ${FORMATIONS.map(f => `<option ${f === t.formation ? 'selected' : ''}>${f}</option>`).join('')}
+                        </select>
+                        <input type="color" data-side="${side}" data-k="color" value="${t.color}">
+                    </div>
+                    ${t.players.map((p, i) => `
+                        <div class="prow ${p.active ? '' : 'off'}">
+                            <input type="checkbox" data-side="${side}" data-i="${i}" data-k="active" ${p.active ? 'checked' : ''} title="Ra sân">
+                            <input type="number" min="0" max="99" data-side="${side}" data-i="${i}" data-k="num" value="${esc(p.num)}">
+                            <input type="text" data-side="${side}" data-i="${i}" data-k="name" value="${esc(p.name)}" placeholder="Tên cầu thủ">
+                            <span class="role" data-role="${side}-${i}">${ROLE_VN[roleOf(side, p)]}</span>
+                        </div>`).join('')}
+                </div>`;
+            }).join('');
+            renderNames();
+        }
+
+        function refreshRoles() {
+            ['home', 'away'].forEach(side => teams[side].players.forEach((p, i) => {
+                const el = document.querySelector(`[data-role="${side}-${i}"]`);
+                if (el) el.textContent = ROLE_VN[roleOf(side, p)];
+            }));
+        }
+
+        function renderNames() {
+            $('nameHome').textContent = teams.home.name || 'Đội nhà';
+            $('nameAway').textContent = teams.away.name || 'Đội khách';
+        }
+
+        function renderPitch() {
+            pitch.querySelectorAll('.player').forEach(el => el.remove());
+            ['home', 'away'].forEach(side => {
+                const t = teams[side];
+                t.players.forEach((p, i) => {
+                    if (!p.active) return;
+                    const el = document.createElement('div');
+                    el.className = 'player';
+                    el.style.left = p.x + '%';
+                    el.style.top = p.y + '%';
+                    const color = i === 0 ? (side === 'home' ? '#f59f00' : '#9c36b5') : t.color;
+                    el.innerHTML = `<div class="wrap">${shirtSVG(color, p.num)}</div><span class="name">${esc(p.name)}</span>`;
+                    enableDrag(el, side, i);
+                    pitch.appendChild(el);
+                });
+            });
+        }
+
+        // ===== KÉO THẢ / BẤM ĐÚP RÚT CẦU THỦ =====
+        let lastTap = { key: null, time: 0 };
+
+        function enableDrag(el, side, i) {
+            el.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                el.setPointerCapture(e.pointerId);
+                const p = teams[side].players[i];
+                const sx = e.clientX, sy = e.clientY;
+                let moved = false;
+
+                const move = ev => {
+                    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+                    moved = true;
+                    el.classList.add('dragging');
+                    const r = pitch.getBoundingClientRect();
+                    p.x = clamp(((ev.clientX - r.left) / r.width) * 100);
+                    p.y = clamp(((ev.clientY - r.top) / r.height) * 100);
+                    el.style.left = p.x + '%';
+                    el.style.top = p.y + '%';
+                };
+                const up = () => {
+                    el.removeEventListener('pointermove', move);
+                    el.removeEventListener('pointerup', up);
+                    el.removeEventListener('pointercancel', up);
+                    el.classList.remove('dragging');
+
+                    if (moved) {
+                        refreshRoles();
+                        save();
+                        schedulePredict();
+                        return;
+                    }
+                    const key = side + i, now = Date.now();
+                    if (lastTap.key === key && now - lastTap.time < 350) {   // bấm đúp
+                        p.active = false;
+                        lastTap = { key: null, time: 0 };
+                        renderEditors();
+                        renderPitch();
+                        save();
+                        schedulePredict();
+                    } else {
+                        lastTap = { key, time: now };
+                    }
+                };
+                el.addEventListener('pointermove', move);
+                el.addEventListener('pointerup', up);
+                el.addEventListener('pointercancel', up);
+            });
+        }
+
+        // ===== SỰ KIỆN EDITOR =====
+        function onEdit(e) {
+            const t = e.target, d = t.dataset;
+            if (!d.side) return;
+            const team = teams[d.side];
+            switch (d.k) {
+                case 'tname':
+                    if (e.type !== 'input') return;
+                    team.name = t.value; renderNames(); break;
+                case 'color':
+                    team.color = t.value; renderPitch(); save(); return;
+                case 'formation':
+                    if (e.type !== 'change') return;
+                    team.formation = t.value; arrange(d.side); renderEditors(); renderPitch(); break;
+                case 'num': case 'name':
+                    if (e.type !== 'input') return;
+                    team.players[+d.i][d.k] = t.value; renderPitch(); break;
+                case 'active':
+                    if (e.type !== 'change') return;
+                    team.players[+d.i].active = t.checked;
+                    t.closest('.prow').classList.toggle('off', !t.checked);
+                    renderPitch(); break;
+                default: return;
+            }
+            save();
+            schedulePredict();
+        }
+        $('editors').addEventListener('input', onEdit);
+        $('editors').addEventListener('change', onEdit);
+
+        // ===== LƯU TỰ ĐỘNG =====
+        function save() {
+            try { localStorage.setItem(STORE_KEY, JSON.stringify({ teams, auto: $('auto').checked })); } catch (e) {}
+        }
+        function load() {
+            try {
+                const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+                if (!s) return false;
+                ['home', 'away'].forEach(side => {
+                    if (s.teams?.[side]?.players?.length === 11) Object.assign(teams[side], s.teams[side]);
+                });
+                $('auto').checked = s.auto !== false;
+                return true;
+            } catch (e) { return false; }
+        }
+        $('auto').addEventListener('change', save);
+
+        // ===== GỌI AI =====
+        const cache = new Map();
+        let predictTimer = null, reqId = 0, lastPrediction = null;
+
+        function teamPayload(side) {
+            const t = teams[side];
+            const players = [], removed = [];
+            t.players.forEach(p => {
+                if (!p.active) { removed.push({ number: +p.num || 0, name: String(p.name).trim() }); return; }
+                players.push({
+                    number: +p.num || 0,
+                    name: String(p.name).trim(),
+                    role: roleOf(side, p),
+                    depth: Math.round(depthOf(side, p) / 5) * 5,
+                    width: Math.round(widthOf(side, p) / 5) * 5
+                });
+            });
+            const count = r => players.filter(p => p.role === r).length;
+            return {
+                name: t.name.trim() || (side === 'home' ? 'Đội nhà' : 'Đội khách'),
+                initial_formation: t.formation,
+                current_shape: `${count('DEF')}-${count('MID')}-${count('FWD')}`,
+                players,
+                removed_players: removed
+            };
+        }
+
+        function setStatus(cls, text) {
+            const c = $('status');
+            c.className = 'chip ' + cls;
+            c.textContent = text;
+        }
+
+        function schedulePredict() {
+            if (!$('auto').checked) { setStatus('stale', 'Có thay đổi'); return; }
+            setStatus('stale', 'Đã thay đổi…');
+            clearTimeout(predictTimer);
+            predictTimer = setTimeout(predict, 1200);
+        }
+
+        async function predict() {
+            clearTimeout(predictTimer);
+            const body = JSON.stringify({ home: teamPayload('home'), away: teamPayload('away') });
+            if (cache.has(body)) { showPrediction(cache.get(body)); return; }
+
+            const id = ++reqId;
+            setStatus('loading', 'AI đang phân tích…');
+            $('predictBtn').disabled = true;
+            try {
+                const r = await fetch('/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+                const data = await r.json().catch(() => ({}));
+                if (id !== reqId) return;
+                if (!r.ok) {
+                    if (r.status === 404 || r.status === 405) {
+                        throw new Error('Chưa có backend /api/predict. Hãy chạy bằng "vercel dev" hoặc deploy lên Vercel (Go Live không chạy được phần AI).');
+                    }
+                    throw new Error(data.error || ('Lỗi ' + r.status));
+                }
+                cache.set(body, data);
+                showPrediction(data);
+            } catch (e) {
+                if (id !== reqId) return;
+                setStatus('err', 'Lỗi');
+                $('summary').textContent = e.message || 'Không gọi được AI';
+            } finally {
+                if (id === reqId) $('predictBtn').disabled = false;
+            }
+        }
+
+        function showPrediction(d) {
+            const prev = lastPrediction;
+            lastPrediction = d;
+            $('predictBtn').disabled = false;
+
+            $('score').textContent = `${d.score.home} – ${d.score.away}`;
+            $('delta').textContent = prev && (prev.score.home !== d.score.home || prev.score.away !== d.score.away)
+                ? `Trước đó: ${prev.score.home} – ${prev.score.away}` : '';
+
+            const w = d.win_prob;
+            $('prob').innerHTML =
+                `<div style="width:${w.home}%;background:${teams.home.color}"></div>` +
+                `<div style="width:${w.draw}%;background:#adb5bd"></div>` +
+                `<div style="width:${w.away}%;background:${teams.away.color}"></div>`;
+            $('probLegend').innerHTML = `<span>Thắng ${w.home}%</span><span>Hòa ${w.draw}%</span><span>Thắng ${w.away}%</span>`;
+
+            const row = (label, o) => `<div class="stat"><span class="v">${o.home}</span><span class="l">${label}</span><span class="v">${o.away}</span></div>`;
+            $('stats').innerHTML = row('Phạt góc', d.corners) + row('Thẻ vàng', d.yellow_cards) + row('Thẻ đỏ', d.red_cards);
+
+            $('summary').textContent = d.summary || '';
+            $('factors').innerHTML = (d.factors || []).map(f => `<li>${esc(f)}</li>`).join('');
+
+            const t = new Date();
+            setStatus('ok', 'Cập nhật ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'));
+        }
+
+        $('predictBtn').addEventListener('click', predict);
+
+        // ===== KHỞI TẠO =====
+        if (!load()) { arrange('home'); arrange('away'); }
+        renderEditors();
+        renderPitch();
+    </script>
+</body>
+</html>
