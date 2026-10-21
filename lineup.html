@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo đội hình</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: #f2f4f8;
+            color: #222;
+        }
+        header {
+            background: linear-gradient(90deg, #1b7a1b, #2e9e2e);
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header h1 { margin: 0; font-size: 1.3rem; }
+        header a { color: #fff; text-decoration: none; opacity: .9; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 24px;
+            max-width: 1150px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+        .panel {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.08);
+            align-self: start;
+        }
+        label { display: block; font-size: .85rem; font-weight: 600; margin: 12px 0 4px; }
+        h3 { font-size: .95rem; margin: 18px 0 8px; color: #1b7a1b; }
+        input[type=text], input[type=number], input[type=date], select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: .95rem;
+        }
+        input[type=color] { width: 100%; height: 38px; border: none; border-radius: 8px; cursor: pointer; }
+        input[type=file] { display: none; }
+
+        .file-btn {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: #eef0f4;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .player-row { display: grid; grid-template-columns: 52px 1fr 34px 34px; gap: 6px; margin-bottom: 6px; }
+        .player-row input { padding: 7px 8px; }
+        .mini-btn {
+            border: none;
+            border-radius: 8px;
+            background: #eef0f4;
+            cursor: pointer;
+            font-size: .9rem;
+        }
+        .mini-btn.rm { background: #ffe3e3; }
+
+        .buttons { display: flex; gap: 8px; margin-top: 16px; }
+        .buttons button {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            color: #fff;
+            transition: transform .15s;
+        }
+        .buttons button:hover { transform: translateY(-2px); }
+        .btn-reset { background: #1b7a1b; }
+        .btn-wipe  { background: #868e96; }
+        .buttons button { font-size: .85rem; }
+        .btn-dl    { background: #3b82f6; }
+
+        /* ===== KHU VỰC BÊN PHẢI ===== */
+        .right { text-align: center; }
+        .hint { color: #e67e22; font-size: .85rem; margin: 0 0 10px; }
+
+        .toolbar { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+        .tool-btn {
+            padding: 9px 16px;
+            border: 2px solid #1b7a1b;
+            background: #fff;
+            color: #1b7a1b;
+            border-radius: 999px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: .85rem;
+            cursor: pointer;
+        }
+        .tool-btn.active { background: #1b7a1b; color: #fff; }
+
+        /* ===== KHUNG XUẤT ẢNH ===== */
+        #exportArea {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 16px;
+            border-radius: 18px;
+            background: linear-gradient(160deg, #14532d, #0b2e1a);
+            box-shadow: 0 10px 30px rgba(0,0,0,.25);
+        }
+        .ex-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+            text-align: left;
+            margin-bottom: 12px;
+            min-height: 48px;
+        }
+        .ex-head img { height: 48px; width: auto; max-width: 80px; object-fit: contain; }
+        .ex-head img[hidden] { display: none; }
+        .ex-team { font-size: 1.3rem; font-weight: 700; }
+        .ex-meta { font-size: .85rem; opacity: .8; }
+
+        #pitch {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            border-radius: 12px;
+            overflow: hidden;
+            background: repeating-linear-gradient(0deg, #2f9e44 0 60px, #37b24d 60px 120px);
+            border: 3px solid #fff;
+            touch-action: none;
+        }
+        #pitch .line { position: absolute; border: 2px solid rgba(255,255,255,.75); }
+        .mid    { left: 0; right: 0; top: 50%; border-width: 2px 0 0 0 !important; }
+        .circle { width: 24%; aspect-ratio: 1; left: 38%; top: calc(50% - 12%); border-radius: 50%; }
+        .box-top    { left: 25%; width: 50%; top: 0; height: 15%; border-top: none !important; }
+        .box-bottom { left: 25%; width: 50%; bottom: 0; height: 15%; border-bottom: none !important; }
+
+        /* lớp vẽ chiến thuật */
+        #draw {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            pointer-events: none;
+        }
+        #draw.on { pointer-events: auto; cursor: crosshair; }
+
+        /* cầu thủ trên sân */
+        .player {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .player.dragging { cursor: grabbing; z-index: 10; }
+        .player .wrap { position: relative; width: 72px; height: 72px; margin: 0 auto; }
+        .player .wrap.has-photo { width: 104px; height: 104px; }
+        .player .name {
+            display: block;
+            margin-top: 3px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .wrap svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 3px rgba(0,0,0,.35)); }
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 3px solid #fff;
+            box-shadow: 0 3px 6px rgba(0,0,0,.4);
+        }
+        .numbadge {
+            position: absolute;
+            bottom: -3px; right: -5px;
+            min-width: 24px; height: 24px;
+            padding: 0 5px;
+            border-radius: 12px;
+            background: #212529;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 24px;
+            text-align: center;
+            border: 1.5px solid #fff;
+        }
+        .cap {
+            position: absolute;
+            top: -5px; right: -5px;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: #fcc419;
+            color: #222;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 20px;
+            text-align: center;
+            border: 2px solid #fff;
+        }
+
+        /* ===== DỰ BỊ ===== */
+        .ex-bench { margin-top: 12px; text-align: left; }
+        .bench-title { color: #fff; font-weight: 600; font-size: .85rem; opacity: .85; margin-bottom: 6px; }
+        #bench { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chip {
+            width: 88px;
+            padding: 8px 2px 6px;
+            border-radius: 10px;
+            background: rgba(255,255,255,.1);
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .chip .wrap { position: relative; width: 52px; height: 52px; margin: 0 auto; }
+        .chip .wrap.has-photo { width: 68px; height: 68px; }
+        .chip .name {
+            display: block;
+            margin-top: 4px;
+            font-size: .8rem;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chip.dim { opacity: .35; }
+        .chip.ghost {
+            position: fixed;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1000;
+            opacity: .95;
+            background: rgba(20,83,45,.9);
+        }
+
+        @media (max-width: 880px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+
+        /* điện thoại: thu nhỏ lại cho vừa */
+        @media (max-width: 600px) {
+            .player { width: 84px; }
+            .player .wrap { width: 48px; height: 48px; }
+            .player .wrap.has-photo { width: 68px; height: 68px; }
+            .chip .wrap.has-photo { width: 52px; height: 52px; }
+            .player .name { font-size: .75rem; }
+            .numbadge { min-width: 20px; height: 20px; line-height: 20px; font-size: 11px; }
+            .cap { width: 20px; height: 20px; line-height: 17px; font-size: 12px; }
+            .chip { width: 70px; }
+            .chip .wrap { width: 40px; height: 40px; }
+            .chip .name { font-size: .7rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>⚽ Tạo đội hình</h1>
+        <a href="index.html">← Trang chủ</a>
+    </header>
+
+    <div class="layout">
+        <!-- CỘT TRÁI: ĐIỀU KHIỂN -->
+        <div class="panel">
+            <label>Tên đội</label>
+            <input type="text" id="teamName" placeholder="VD: UIT FC">
+
+            <label>Ngày thi đấu</label>
+            <input type="date" id="matchDate">
+
+            <label>Logo đội</label>
+            <label class="file-btn" for="logoInput" style="display:inline-block;margin:0">🖼 Chọn logo</label>
+            <input type="file" id="logoInput" accept="image/*">
+
+            <label>Số lượng người</label>
+            <select id="count">
+                <option value="5">Sân 5 (5 người)</option>
+                <option value="7" selected>Sân 7 (7 người)</option>
+                <option value="9">Sân 9 (9 người)</option>
+                <option value="11">Sân 11 (11 người)</option>
+            </select>
+
+            <label>Sơ đồ thi đấu</label>
+            <select id="formation"></select>
+
+            <label>Màu áo</label>
+            <input type="color" id="color" value="#e03131">
+
+            <h3>Đội hình chính</h3>
+            <div id="playerList"></div>
+
+            <h3>Dự bị</h3>
+            <div id="benchList"></div>
+
+            <div class="buttons">
+                <button class="btn-reset" id="reset">Xếp lại vị trí</button>
+                <button class="btn-dl" id="download">Tải về</button>
+                <button class="btn-wipe" id="wipe">Làm mới</button>
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI -->
+        <div class="right">
+            <p class="hint">Kéo để di chuyển · Bấm vào áo để tải ảnh · Bấm đúp để chọn đội trưởng · Kéo dự bị vào cầu thủ để thay người</p>
+
+            <div class="toolbar">
+                <button class="tool-btn" id="drawBtn">✏️ Vẽ chiến thuật</button>
+                <button class="tool-btn" id="undoBtn">↩ Hoàn tác</button>
+                <button class="tool-btn" id="clearBtn">🗑 Xóa nét vẽ</button>
+            </div>
+
+            <div id="exportArea">
+                <div class="ex-head">
+                    <img id="logoImg" hidden alt="logo">
+                    <div>
+                        <div class="ex-team" id="exTeam">Tên đội</div>
+                        <div class="ex-meta" id="exMeta"></div>
+                    </div>
+                </div>
+
+                <div id="pitch">
+                    <div class="line mid"></div>
+                    <div class="line circle"></div>
+                    <div class="line box-top"></div>
+                    <div class="line box-bottom"></div>
+                    <svg id="draw" viewBox="0 0 200 300" preserveAspectRatio="none"></svg>
+                </div>
+
+                <div class="ex-bench">
+                    <div class="bench-title">DỰ BỊ</div>
+                    <div id="bench"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="photoInput" accept="image/*">
+
+    <script>
+        // ===== DỮ LIỆU =====
+        const FORMATIONS = {
+            5:  ['2-2', '1-2-1', '2-1-1'],
+            7:  ['3-2-1', '2-3-1', '2-2-2', '3-1-2'],
+            9:  ['3-3-2', '3-2-3', '4-3-1'],
+            11: ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1']
+        };
+        const BENCH_SIZE = 5;
+        const GK_COLOR = '#f59f00';
+        const FIELDS = ['num', 'name', 'photo', 'captain'];
+
+        const $ = id => document.getElementById(id);
+        const pitch = $('pitch');
+        const benchEl = $('bench');
+        const drawSvg = $('draw');
+
+        let players = [];   // { num, name, photo, captain, x, y }
+        let bench = [];     // { num, name, photo, captain }
+        let arrows = [];
+        let drawMode = false;
+        let photoTarget = null;
+        let logoData = null;
+
+        // ===== TIỆN ÍCH =====
+        const esc = s => String(s ?? '').replace(/[&<>"]/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const clamp = v => Math.min(95, Math.max(5, v));
+        const group = g => (g === 'main' ? players : bench);
+
+        function swapPerson(a, b) {
+            FIELDS.forEach(k => { const t = a[k]; a[k] = b[k]; b[k] = t; });
+        }
+
+        function resizeImage(file, size) {
+            return new Promise(resolve => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    const s = Math.min(img.width, img.height);
+                    const c = document.createElement('canvas');
+                    c.width = c.height = size;
+                    c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+                    URL.revokeObjectURL(url);
+                    resolve(c.toDataURL('image/jpeg', 0.85));
+                };
+                img.src = url;
+            });
+        }
+
+        // ===== SƠ ĐỒ =====
+        function layoutPositions(formation) {
+            const rows = [1, ...formation.split('-').map(Number)];
+            const pos = [];
+            const top = 12, bottom = 90;
+            rows.forEach((n, r) => {
+                const y = bottom - (bottom - top) * (r / (rows.length - 1));
+                for (let i = 0; i < n; i++) pos.push({ x: (100 / (n + 1)) * (i + 1), y });
+            });
+            return pos;
+        }
+
+        function fillFormations() {
+            $('formation').innerHTML = FORMATIONS[$('count').value]
+                .map(f => `<option value="${f}">${f}</option>`).join('');
+        }
+
+        function arrange(keepPos) {
+            const count = +$('count').value;
+            const pos = layoutPositions($('formation').value);
+            players = pos.map((p, i) => ({
+                num: players[i]?.num ?? i + 1,
+                name: players[i]?.name ?? 'Cầu thủ ' + String.fromCharCode(65 + i),
+                photo: players[i]?.photo ?? null,
+                captain: players[i]?.captain ?? false,
+                x: keepPos === true && players[i] ? players[i].x : p.x,
+                y: keepPos === true && players[i] ? players[i].y : p.y
+            })).slice(0, count);
+
+            if (!bench.length) {
+                bench = Array.from({ length: BENCH_SIZE }, (_, i) => ({
+                    num: 12 + i, name: 'Dự bị ' + (i + 1), photo: null, captain: false
+                }));
+            }
+            renderAll();
+        }
+
+        // ===== VẼ GIAO DIỆN =====
+        function shirtSVG(color, num) {
+            return `<svg viewBox="0 0 64 64">
+                <path d="M20 6 L8 16 L14 26 L20 22 L20 58 L44 58 L44 22 L50 26 L56 16 L44 6 C40 12 24 12 20 6Z"
+                      fill="${color}" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                <text x="32" y="42" text-anchor="middle" font-size="18" font-weight="700"
+                      font-family="Poppins, sans-serif" fill="#fff">${esc(num)}</text>
+            </svg>`;
+        }
+
+        function avatarHTML(p, color) {
+            const cap = p.captain ? '<span class="cap">C</span>' : '';
+            if (p.photo) {
+                return `<div class="avatar" style="background-image:url('${p.photo}')"></div>
+                        <span class="numbadge">${esc(p.num)}</span>${cap}`;
+            }
+            return shirtSVG(color, p.num) + cap;
+        }
+
+        function renderPitch() {
+            scheduleSave();
+            pitch.querySelectorAll('.player').forEach(el => el.remove());
+            const color = $('color').value;
+            players.forEach((p, i) => {
+                const el = document.createElement('div');
+                el.className = 'player';
+                el.dataset.i = i;
+                el.style.left = p.x + '%';
+                el.style.top = p.y + '%';
+                el.innerHTML = `<div class="wrap${p.photo ? ' has-photo' : ''}">${avatarHTML(p, i === 0 ? GK_COLOR : color)}</div>
+                                <span class="name">${esc(p.name)}</span>`;
+                enablePitchDrag(el, i);
+                pitch.appendChild(el);
+            });
+        }
+
+        function renderBench() {
+            const color = $('color').value;
+            benchEl.innerHTML = '';
+            bench.forEach((p, i) => {
+                const el = document.createElement('div');
+                el.className = 'chip';
+                el.dataset.i = i;
+                el.innerHTML = `<div class="wrap${p.photo ? ' has-photo' : ''}">${avatarHTML(p, color)}</div>
+                                <span class="name">${esc(p.name)}</span>`;
+                enableBenchDrag(el, i);
+                benchEl.appendChild(el);
+            });
+        }
+
+        function rowHTML(g, p, i) {
+            return `<div class="player-row">
+                <input type="number" min="0" max="99" value="${esc(p.num)}" data-g="${g}" data-i="${i}" data-k="num">
+                <input type="text" value="${esc(p.name)}" data-g="${g}" data-i="${i}" data-k="name">
+                <button type="button" class="mini-btn photo-btn" data-g="${g}" data-i="${i}" title="Tải ảnh">📷</button>
+                ${p.photo
+                    ? `<button type="button" class="mini-btn rm rm-btn" data-g="${g}" data-i="${i}" title="Xóa ảnh">✕</button>`
+                    : '<span></span>'}
+            </div>`;
+        }
+
+        function renderList() {
+            $('playerList').innerHTML = players.map((p, i) => rowHTML('main', p, i)).join('');
+            $('benchList').innerHTML = bench.map((p, i) => rowHTML('bench', p, i)).join('');
+        }
+
+        function renderHeader() {
+            scheduleSave();
+            $('exTeam').textContent = $('teamName').value.trim() || 'Tên đội';
+            const d = $('matchDate').value;
+            const dateStr = d ? d.split('-').reverse().join('/') : '';
+            $('exMeta').textContent = ['Sơ đồ ' + $('formation').value, dateStr].filter(Boolean).join(' · ');
+            const img = $('logoImg');
+            if (logoData) { img.src = logoData; img.hidden = false; } else { img.hidden = true; }
+        }
+
+        function renderAll() {
+            renderList();
+            renderPitch();
+            renderBench();
+            renderHeader();
+        }
+
+        // ===== BẤM: ẢNH / ĐỘI TRƯỞNG =====
+        let tapTimer = null, lastTapKey = null;
+
+        function onTap(g, i) {
+            const key = g + i;
+            if (tapTimer && lastTapKey === key) {          // bấm đúp
+                clearTimeout(tapTimer);
+                tapTimer = null;
+                toggleCaptain(g, i);
+                return;
+            }
+            clearTimeout(tapTimer);
+            lastTapKey = key;
+            tapTimer = setTimeout(() => { tapTimer = null; pickPhoto(g, i); }, 280);   // bấm một lần
+        }
+
+        function toggleCaptain(g, i) {
+            const was = group(g)[i].captain;
+            [...players, ...bench].forEach(p => p.captain = false);
+            group(g)[i].captain = !was;
+            renderAll();
+        }
+
+        function pickPhoto(g, i) {
+            photoTarget = { g, i };
+            $('photoInput').click();
+        }
+
+        // ===== KÉO THẢ =====
+        function enablePitchDrag(el, i) {
+            el.addEventListener('pointerdown', e => {
+                if (drawMode) return;
+                e.preventDefault();
+                el.setPointerCapture(e.pointerId);
+                const sx = e.clientX, sy = e.clientY;
+                const ox = players[i].x, oy = players[i].y;
+                let moved = false;
+
+                const move = ev => {
+                    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+                    moved = true;
+                    el.classList.add('dragging');
+                    const r = pitch.getBoundingClientRect();
+                    players[i].x = clamp(((ev.clientX - r.left) / r.width) * 100);
+                    players[i].y = clamp(((ev.clientY - r.top) / r.height) * 100);
+                    el.style.left = players[i].x + '%';
+                    el.style.top = players[i].y + '%';
+                };
+                const up = ev => {
+                    el.removeEventListener('pointermove', move);
+                    el.removeEventListener('pointerup', up);
+                    el.removeEventListener('pointercancel', up);
+                    el.classList.remove('dragging');
+                    if (!moved) { onTap('main', i); return; }
+                    scheduleSave();
+
+                    // thả lên ô dự bị -> thay người
+                    el.style.pointerEvents = 'none';
+                    const t = document.elementFromPoint(ev.clientX, ev.clientY);
+                    el.style.pointerEvents = '';
+                    const chip = t && t.closest('.chip');
+                    if (chip) {
+                        players[i].x = ox;
+                        players[i].y = oy;
+                        swapPerson(players[i], bench[+chip.dataset.i]);
+                        renderAll();
+                    }
+                };
+                el.addEventListener('pointermove', move);
+                el.addEventListener('pointerup', up);
+                el.addEventListener('pointercancel', up);
+            });
+        }
+
+        function enableBenchDrag(el, i) {
+            el.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                el.setPointerCapture(e.pointerId);
+                const sx = e.clientX, sy = e.clientY;
+                let moved = false, ghost = null;
+
+                const move = ev => {
+                    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+                    if (!moved) {
+                        moved = true;
+                        ghost = el.cloneNode(true);
+                        ghost.classList.add('ghost');
+                        document.body.appendChild(ghost);
+                        el.classList.add('dim');
+                    }
+                    ghost.style.left = ev.clientX + 'px';
+                    ghost.style.top = ev.clientY + 'px';
+                };
+                const up = ev => {
+                    el.removeEventListener('pointermove', move);
+                    el.removeEventListener('pointerup', up);
+                    el.removeEventListener('pointercancel', up);
+                    el.classList.remove('dim');
+                    if (!moved) { onTap('bench', i); return; }
+                    ghost.remove();
+
+                    const t = document.elementFromPoint(ev.clientX, ev.clientY);
+                    const pl = t && t.closest('.player');
+                    const ch = t && t.closest('.chip');
+                    if (pl) {
+                        swapPerson(bench[i], players[+pl.dataset.i]);
+                        renderAll();
+                    } else if (ch && ch !== el) {
+                        swapPerson(bench[i], bench[+ch.dataset.i]);
+                        renderAll();
+                    }
+                };
+                el.addEventListener('pointermove', move);
+                el.addEventListener('pointerup', up);
+                el.addEventListener('pointercancel', up);
+            });
+        }
+
+        // ===== VẼ CHIẾN THUẬT =====
+        let curArrow = null;
+
+        function arrowSVG(a) {
+            const dx = a.x2 - a.x1, dy = a.y2 - a.y1;
+            const len = Math.hypot(dx, dy) || 1;
+            const ux = dx / len, uy = dy / len;
+            const L = 14, W = 6;
+            const bx = a.x2 - ux * L, by = a.y2 - uy * L;
+            const px = -uy, py = ux;
+            return `<line x1="${a.x1}" y1="${a.y1}" x2="${bx}" y2="${by}" stroke="#ffd43b" stroke-width="3"
+                          stroke-dasharray="7 5" stroke-linecap="round"/>
+                    <polygon points="${a.x2},${a.y2} ${bx + px * W},${by + py * W} ${bx - px * W},${by - py * W}" fill="#ffd43b"/>`;
+        }
+
+        function renderArrows() {
+            drawSvg.innerHTML = arrows.map(arrowSVG).join('');
+            scheduleSave();
+        }
+
+        function toSvg(e) {
+            const r = drawSvg.getBoundingClientRect();
+            return { x: ((e.clientX - r.left) / r.width) * 200, y: ((e.clientY - r.top) / r.height) * 300 };
+        }
+
+        drawSvg.addEventListener('pointerdown', e => {
+            if (!drawMode) return;
+            e.preventDefault();
+            drawSvg.setPointerCapture(e.pointerId);
+            const p = toSvg(e);
+            curArrow = { x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+            arrows.push(curArrow);
+            renderArrows();
+        });
+        drawSvg.addEventListener('pointermove', e => {
+            if (!curArrow) return;
+            const p = toSvg(e);
+            curArrow.x2 = p.x;
+            curArrow.y2 = p.y;
+            renderArrows();
+        });
+        const endDraw = () => {
+            if (!curArrow) return;
+            if (Math.hypot(curArrow.x2 - curArrow.x1, curArrow.y2 - curArrow.y1) < 10) arrows.pop();
+            curArrow = null;
+            renderArrows();
+        };
+        drawSvg.addEventListener('pointerup', endDraw);
+        drawSvg.addEventListener('pointercancel', endDraw);
+
+        $('drawBtn').addEventListener('click', () => {
+            drawMode = !drawMode;
+            drawSvg.classList.toggle('on', drawMode);
+            $('drawBtn').classList.toggle('active', drawMode);
+            $('drawBtn').textContent = drawMode ? '✅ Xong vẽ' : '✏️ Vẽ chiến thuật';
+        });
+        $('undoBtn').addEventListener('click', () => { arrows.pop(); renderArrows(); });
+        $('clearBtn').addEventListener('click', () => { arrows = []; renderArrows(); });
+
+        // ===== SỰ KIỆN KHÁC =====
+        $('count').addEventListener('change', () => { fillFormations(); arrange(); });
+        $('formation').addEventListener('change', arrange);
+        $('reset').addEventListener('click', arrange);
+        $('color').addEventListener('input', () => { renderPitch(); renderBench(); });
+        $('teamName').addEventListener('input', renderHeader);
+        $('matchDate').addEventListener('input', renderHeader);
+
+        // sửa số áo / tên trong danh sách
+        document.addEventListener('input', e => {
+            const t = e.target;
+            if (!t.dataset || t.dataset.k === undefined) return;
+            group(t.dataset.g)[+t.dataset.i][t.dataset.k] = t.value;
+            renderPitch();
+            renderBench();
+        });
+
+        // nút 📷 và ✕ trong danh sách
+        document.addEventListener('click', e => {
+            const photo = e.target.closest('.photo-btn');
+            const rm = e.target.closest('.rm-btn');
+            if (photo) pickPhoto(photo.dataset.g, +photo.dataset.i);
+            if (rm) { group(rm.dataset.g)[+rm.dataset.i].photo = null; renderAll(); }
+        });
+
+        // chọn ảnh cầu thủ
+        $('photoInput').addEventListener('change', async e => {
+            const file = e.target.files[0];
+            if (file && photoTarget) {
+                group(photoTarget.g)[photoTarget.i].photo = await resizeImage(file, 260);
+                renderAll();
+            }
+            e.target.value = '';
+        });
+
+        // chọn logo
+        $('logoInput').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                // thu nhỏ logo để lưu gọn
+                const img = new Image();
+                img.onload = () => {
+                    const k = Math.min(1, 256 / Math.max(img.width, img.height));
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.width * k);
+                    c.height = Math.round(img.height * k);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    logoData = c.toDataURL('image/png');
+                    renderHeader();
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
+        });
+
+        // tải ảnh về
+        $('download').addEventListener('click', () => {
+            html2canvas($('exportArea'), { scale: 2, backgroundColor: null, useCORS: true }).then(canvas => {
+                const a = document.createElement('a');
+                a.download = ($('teamName').value.trim() || 'doi-hinh') + '.png';
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            });
+        });
+
+        // ===== TỰ ĐỘNG LƯU =====
+        const STORE_KEY = 'lineup-v1';
+        let saveTimer = null;
+        let wiping = false;
+
+        function scheduleSave() {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(saveState, 300);
+        }
+
+        function saveState() {
+            if (wiping) return;
+            try {
+                localStorage.setItem(STORE_KEY, JSON.stringify({
+                    teamName: $('teamName').value,
+                    matchDate: $('matchDate').value,
+                    count: $('count').value,
+                    formation: $('formation').value,
+                    color: $('color').value,
+                    players, bench, arrows, logoData
+                }));
+            } catch (e) {
+                console.warn('Không lưu được đội hình:', e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+                if (!s || !Array.isArray(s.players) || !s.players.length) return null;
+                $('teamName').value = s.teamName || '';
+                if (s.matchDate) $('matchDate').value = s.matchDate;
+                $('count').value = s.count;
+                $('color').value = s.color || '#e03131';
+                players = s.players;
+                bench = s.bench || [];
+                arrows = s.arrows || [];
+                logoData = s.logoData || null;
+                return s;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        $('wipe').addEventListener('click', () => {
+            if (confirm('Xóa toàn bộ đội hình đã lưu và làm mới trang?')) {
+                wiping = true;
+                localStorage.removeItem(STORE_KEY);
+                location.reload();
+            }
+        });
+
+        // ===== KHỞI TẠO =====
+        (function init() {
+            const d = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            $('matchDate').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            const saved = loadState();
+            fillFormations();
+            if (saved) {
+                $('formation').value = saved.formation;
+                arrange(true);
+                renderArrows();
+            } else {
+                arrange();
+            }
+        })();
+    </script>
+</body>
+</html>
